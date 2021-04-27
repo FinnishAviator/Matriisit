@@ -5,7 +5,7 @@ import os
 pygame.init()
 
 #AppData
-AppDataPath = os.path.join(str(os.getenv('APPDATA')), "ArktPVC", "Matriisi")
+AppDataPath = os.path.join(str(os.getenv('APPDATA')), "ArktPVC", "Matriisit")
 if not os.path.isfile(AppDataPath):
     os.makedirs(AppDataPath, exist_ok=True)
 
@@ -51,7 +51,7 @@ grid = generateGrid()
 size = ((width + margin) * count + margin, (height + margin) * count + margin + button_layer_height)
 screen: pygame.Surface = pygame.display.set_mode(size)
 
-pygame.display.set_caption("Matriisi")
+pygame.display.set_caption("Matriisit")
 
 done = False
 
