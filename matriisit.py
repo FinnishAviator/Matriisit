@@ -14,8 +14,17 @@ root.withdraw()
 
 #AppData
 AppDataPath = os.path.join(str(os.getenv('APPDATA')), "ArktPVC", "Matriisit")
-if not os.path.isfile(AppDataPath):
+ConfigPath = os.path.join(AppDataPath, "config.json")
+if not os.path.isdir(AppDataPath):
     os.makedirs(AppDataPath, exist_ok=True)
+if not os.path.isfile(ConfigPath):
+    with open(ConfigPath, "w") as f:
+        f.write("""{
+    \"count\": 80,
+    \"width\": 10,
+    \"height\": 10,
+    \"margin\": 1
+}""")
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -46,11 +55,15 @@ def closestColour(colour: Tuple[int, int, int]) -> Tuple[int, int, int]:
 
     return min(COLOURS_LIST, key=colour_diff)
 
-
-count = 80
-width = 10
-height = 10
-margin = 1
+with open(ConfigPath) as f:
+    parsedConfig: Dict[str, int] = json.loads(f.read())
+    for checkType in parsedConfig.values():
+        if not isinstance(checkType, int):
+            raise TypeError(f"Config value {checkType} is not an integer!")
+    count: int = parsedConfig["count"]
+    width: int = parsedConfig["width"]
+    height: int = parsedConfig["height"]
+    margin: int = parsedConfig["margin"]
 button_layer_height = 50
 font_size = 12
 font = pygame.font.SysFont("Consolas", font_size, True, False)
@@ -193,8 +206,12 @@ while not done:
             if os.path.isfile(loadPath):
                 with open(loadPath, "r", encoding="utf-8") as f:
                     serialized = f.read()
-                grid = json.loads(serialized)
-                print("lataa")
+                tmp = json.loads(serialized)
+                if len(tmp) != count:
+                    print(f"ladattavan tallennuksen matriisin koko ei ole yhteensopiva pelin matriisin koon kanssa.\ntallennuksen koko: {len(tmp)}, pelin koko: {count}")
+                else:
+                    grid = tmp
+                    print("lataa")
             else: print("ei ladattavaa")
         elif previous_slot_x <= x <= previous_slot_x + 100:
             if save_index > 0:
