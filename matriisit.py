@@ -1,8 +1,16 @@
+from typing import Dict, List, Tuple
+from PIL import Image
+import tkinter
+from tkinter import filedialog
+import math
 import pygame
 from pygame.locals import *
 import json
 import os
+
 pygame.init()
+root = tkinter.Tk()
+root.withdraw()
 
 #AppData
 AppDataPath = os.path.join(str(os.getenv('APPDATA')), "ArktPVC", "Matriisit")
@@ -32,6 +40,13 @@ COLOURS_LIST = (
     (0, 0, 128)
 )
 
+def closestColour(colour: Tuple[int, int, int]) -> Tuple[int, int, int]:
+    def colour_diff(iterColour: Tuple[int, int, int]) -> float:
+        return math.sqrt(abs(colour[0] - iterColour[0]) ** 2 + abs(colour[1] - iterColour[1]) ** 2 + abs(colour[2] - iterColour[2]) ** 2)
+
+    return min(COLOURS_LIST, key=colour_diff)
+
+
 count = 80
 width = 10
 height = 10
@@ -43,8 +58,30 @@ left_pressed = False
 right_pressed = False
 color_index = 1
 
-def generateGrid():
+def generateGrid() -> List[List[int]]:
     return [[0 for _ in range(count)] for _ in range(count)]
+
+def loadImageAsGrid() -> List[List[int]]:
+    imagePath = filedialog.askopenfilename(filetypes=(("Image file", "*.jpeg"), ("Image file", "*.jpg"), ("Image file", "*.png"), ("Image file", "*.bmp"), ("Image file", "*.jfif"), ("All files", "*.*")), title="Open Image File")
+    if imagePath == None or len(imagePath) < 1:
+        return generateGrid()
+    with Image.open(imagePath) as im:
+        image = im.convert("RGB")
+
+    cropSize = min(image.size[0], image.size[1])
+    image = image.crop((image.size[0] // 2 - cropSize // 2, image.size[1] // 2 - cropSize // 2, image.size[0] // 2 + cropSize // 2, image.size[1] // 2 + cropSize // 2))
+    image = image.resize((count, count))
+
+    tmpGrid: List[List[int]] = []
+    for y in range(count):
+        tmpGrid.append([])
+        for x in range(count):
+            pxl = image.getpixel((x, y))
+            if isinstance(pxl, int):
+                print("Mitä vittua miks tää on intti?")
+                return generateGrid()
+            tmpGrid[y].append(COLOURS_LIST.index(closestColour((pxl[0], pxl[1], pxl[2]))))
+    return tmpGrid
 
 grid = generateGrid()
 
@@ -65,8 +102,14 @@ save_text = font.render("Tallenna", True, WHITE)
 save_x = 200
 load_text = font.render("Lataa", True, WHITE)
 load_x = 300
+previous_slot_text = font.render("<", True, WHITE)
+previous_slot_x = 400
+next_slot_text = font.render(">", True, WHITE)
+next_slot_x = 600
 
 DebugMode = False
+
+save_index = 0
 
 def menu_button(x: int, _text: pygame.Surface):
     button_rect = pygame.Rect(x + 3, 3, 94, button_layer_height - 6)
@@ -76,6 +119,7 @@ def menu_button(x: int, _text: pygame.Surface):
 while not done:
     left_clicked = False
     right_clicked = False
+    keys_pressed: Dict[int, bool] = pygame.key.get_pressed()
     for event in pygame.event.get():
         if event.type == QUIT:
             done = True
@@ -102,7 +146,9 @@ while not done:
         elif event.type == KEYDOWN:
             if event.key == K_F3:
                 DebugMode = not DebugMode
-
+            elif event.key == K_o:
+                if keys_pressed[K_LCTRL]:
+                    grid = loadImageAsGrid()
 
     player_position = pygame.mouse.get_pos()
 
@@ -112,6 +158,10 @@ while not done:
     menu_button(lopeta_x, lopeta_text)
     menu_button(save_x, save_text)
     menu_button(load_x, load_text)
+    menu_button(previous_slot_x, previous_slot_text)
+    menu_button(next_slot_x, next_slot_text)
+    save_slot_text: pygame.Surface = font.render(str(save_index), True, WHITE)
+    screen.blit(save_slot_text, (previous_slot_x + (next_slot_x - (previous_slot_x + 50)) - save_slot_text.get_width() // 2, button_layer_height // 2 - save_slot_text.get_height() // 2))
     pygame.draw.rect(screen, COLOURS_LIST[color_index], (width * count + margin * count - 47, 3, 44, 44))
 
     x = player_position[0]
@@ -135,17 +185,23 @@ while not done:
             print("lopeta")
         elif save_x <= x <= save_x + 100:
             serialized = json.dumps(grid, separators=(',', ':')) # Toimii, koska grid on vaan lista, jossa on listoja, joissa on numeroita
-            with open(os.path.join(AppDataPath, "save.penis"), "w", encoding="utf-8") as f:
+            with open(os.path.join(AppDataPath, f"save{str(save_index) if save_index != 0 else ''}.penis"), "w", encoding="utf-8") as f:
                 f.write(serialized)
             print("tallenna")
         elif load_x <= x <= load_x + 100:
-            loadPath = os.path.join(AppDataPath, "save.penis")
+            loadPath = os.path.join(AppDataPath, f"save{str(save_index) if save_index != 0 else ''}.penis")
             if os.path.isfile(loadPath):
                 with open(loadPath, "r", encoding="utf-8") as f:
                     serialized = f.read()
                 grid = json.loads(serialized)
                 print("lataa")
             else: print("ei ladattavaa")
+        elif previous_slot_x <= x <= previous_slot_x + 100:
+            if save_index > 0:
+                save_index -= 1
+        elif next_slot_x <= x <= next_slot_x + 100:
+            if save_index < 69:
+                save_index += 1
 
     if DebugMode:
         screen.blit(font.render(format(round(clock.get_fps(), 3), ".3f"), True, WHITE, BLACK), (button_layer_height / 2 - font_size / 2, button_layer_height / 2 - font_size / 2))
