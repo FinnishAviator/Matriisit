@@ -64,7 +64,13 @@ with open(ConfigPath) as f:
     width: int = parsedConfig["width"]
     height: int = parsedConfig["height"]
     margin: int = parsedConfig["margin"]
+
 button_layer_height = 50
+
+size = ((width + margin) * count + margin, (height + margin) * count + margin + button_layer_height)
+pygame.display.set_caption("Matriisit")
+screen: pygame.Surface = pygame.display.set_mode(size)
+
 font_size = 12
 font = pygame.font.SysFont("Consolas", font_size, True, False)
 left_pressed = False
@@ -75,7 +81,7 @@ def generateGrid() -> List[List[int]]:
     return [[0 for _ in range(count)] for _ in range(count)]
 
 def loadImageAsGrid() -> List[List[int]]:
-    imagePath = filedialog.askopenfilename(filetypes=(("Image file", "*.jpeg"), ("Image file", "*.jpg"), ("Image file", "*.png"), ("Image file", "*.bmp"), ("Image file", "*.jfif"), ("All files", "*.*")), title="Open Image File")
+    imagePath = filedialog.askopenfilename(filetypes=(("Image file", "*.jpeg"), ("Image file", "*.jpg"), ("Image file", "*.png"), ("Image file", "*.tiff"), ("Image file", "*.bmp"), ("Image file", "*.jfif"), ("All files", "*.*")), title="Open Image File")
     if imagePath == None or len(imagePath) < 1:
         return generateGrid()
     with Image.open(imagePath) as im:
@@ -97,11 +103,6 @@ def loadImageAsGrid() -> List[List[int]]:
     return tmpGrid
 
 grid = generateGrid()
-
-size = ((width + margin) * count + margin, (height + margin) * count + margin + button_layer_height)
-screen: pygame.Surface = pygame.display.set_mode(size)
-
-pygame.display.set_caption("Matriisit")
 
 done = False
 
