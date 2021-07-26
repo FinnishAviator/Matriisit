@@ -21,16 +21,23 @@ ConfigPath = os.path.join(AppDataPath, "config.json")
 if not os.path.isdir(AppDataPath):
     os.makedirs(AppDataPath, exist_ok=True)
 
+def defaultConfigSerialization(config: dict) -> str:
+    return json.dumps(config, indent=4)
+
+def defaultSaveSerialization(save: List[List[int]]) -> str:
+    return json.dumps(save, separators=(',', ':')) # Toimii, koska grid on vaan lista, jossa on listoja, joissa on numeroita
+
 defaultConfig: Dict[str, int] = {
     "count": 80,
     "width": 10,
     "height": 10,
     "margin": 1,
-    "useDrawPathPrediction": True
+    "useDrawPathPrediction": True,
+    "displayDrawPreview": True
 }
 if not os.path.isfile(ConfigPath):
     with open(ConfigPath, "w", encoding="utf-8") as f:
-        f.write(json.dumps(defaultConfig))
+        f.write(defaultConfigSerialization(defaultConfig))
 
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
@@ -80,12 +87,13 @@ with open(ConfigPath, "r+", encoding="utf-8") as f:
             print(f"{defaultKey} not found in settings. Setting it to: {defaultValue}")
             f.seek(0) # Truncate does not work if pointer is not at the beginning of the file
             f.truncate() # Truncate clears the file of all text
-            f.write(json.dumps(parsedConfig)) # Writing all settings where default value for defaultKey was added
+            f.write(defaultConfigSerialization(parsedConfig)) # Writing all settings where default value for defaultKey was added
     count: int = parsedConfig["count"]
     width: int = parsedConfig["width"]
     height: int = parsedConfig["height"]
     margin: int = parsedConfig["margin"]
-    pathPrediction: bool = True if parsedConfig["useDrawPathPrediction"] else False
+    path_prediction: bool = True if parsedConfig["useDrawPathPrediction"] else False
+    draw_preview: bool = True if parsedConfig["displayDrawPreview"] else False
 
 button_layer_height = 50
 
@@ -178,7 +186,7 @@ class button_functions:
     @staticmethod
     def save():
         global grid, save_index
-        serialized = json.dumps(grid, separators=(',', ':')) # Toimii, koska grid on vaan lista, jossa on listoja, joissa on numeroita
+        serialized = defaultSaveSerialization(grid)
         with open(get_save_path(save_index), "w", encoding="utf-8") as f:
             f.write(serialized)
         print("tallenna")
@@ -289,7 +297,7 @@ while running:
 
         if (left_pressed or right_pressed) and pygame.mouse.get_focused():
 
-            if pathPrediction and lastPathPredPos != None:
+            if path_prediction and lastPathPredPos != None:
                 pathPredLine: modules.line.Line = modules.line.Line(lastPathPredPos, (mouse_row, mouse_column))
 
                 pathPredDist = pathPredLine.Distance
@@ -317,7 +325,7 @@ while running:
             # pygame.draw.rect(screen, COLOURS_LIST[grid[row][column]], (column * width + margin * column + margin, row * height + margin * row + margin + button_layer_height, width, height))
             renderMatrixUnit(screen, row, column, COLOURS_LIST[grid[row][column]])
 
-    if mouse_column != None and mouse_row != None:
+    if draw_preview and mouse_column != None and mouse_row != None:
         overlay_color = COLOURS_LIST[color_index]
         renderMatrixUnit(screen, mouse_row, mouse_column, (overlay_color[0], overlay_color[1], overlay_color[2], 64))
 
